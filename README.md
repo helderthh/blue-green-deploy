@@ -1,6 +1,6 @@
 # A simple blue green deployment
 
-In this repository you will find a *Python3* script called `bg-deploy.py` to execute a blue green deployment with Kubernetes. In addition, you will find a folder containing the source code of a simple [ping pong service](../blob/master/ping-pong) using Flask, which you can use in case you want to test this script or whatever you need.
+In this repository you will find a *Python3* script called `bg-deploy.py` to execute a blue green deployment with Kubernetes. In addition, you will find a folder containing the source code of a simple [ping pong service](../master/ping-pong) using Flask, which you can use in case you want to test this script or whatever you need.
 
 
 # bg-deploy
@@ -41,5 +41,5 @@ Your project should have:
 - A `production/deployment.yaml` file with the label `deployment: ${DEPLOY_VERSION}`
 - A `production/service.yaml` file with the label `deployment: ${DEPLOY_VERSION}`
 
-Please check a simple use in the [ping pong service](../blob/master/ping-pong) example, specially, take a look into the .yaml files.
+Please check a simple use in the [ping pong service](../master/ping-pong) example, specially, take a look into the .yaml files.
 
