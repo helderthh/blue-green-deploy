@@ -1,0 +1,28 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ping-pong
+spec:
+  selector:
+    matchLabels:
+      app: PingPong
+  template:
+    metadata:
+      labels:
+        app: PingPong
+        deployment: ${DEPLOY_VERSION}
+    spec:
+      containers:
+      - name: ping-pong
+        image: helderth/flask-ping-pong
+        readinessProbe:
+          httpGet:
+              path: /healthz
+              port: 8001
+        ports:
+          - name: http
+            containerPort: 8001
+
+
+
+
