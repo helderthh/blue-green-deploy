@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import re
@@ -68,31 +69,37 @@ def apply(file_path, color):
     subprocess.call(['kubectl', 'apply' ,'-f', temp_file_path])
 
 
-def get_deployment_label(deployment_name):
+def get_deployment_label(deployment_app_label):
     """Gets current deployment color.
 
     Args:
-        deployment_name (str): target deployment label found in
-        (spec -> template -> metadata -> labels -> deployment)
+        deployment_name (str): target deployment app label found in
+        (spec -> template -> metadata -> labels -> app)
 
     Returns:
         (str) current deployment color
     """
-    ret = subprocess.check_output(['kubectl', 'get', 'deploy', deployment_name, '-o', 'json'])
+    ret = subprocess.check_output(['kubectl', 'get', 'deploy', '-l', f"app in ({deployment_app_label})", '-o', 'json'])
     d = json.loads(ret)
-    color = d['spec']['template']['metadata']['labels']['deployment']
+    deployments = d['items']
+    if len(deployments) > 1:
+        raise Exception(f"ERROR: please be sure there is only one deployment with the 'deployment_app_label' = {deployment_app_label}")
+
+    color = deployments[0]['spec']['template']['metadata']['labels']['deployment'] if deployments else BLUE
     return color
 
 
-def run(project_root, deployment_name):
+def run(project_root, deployment_name, deployment_app_label):
     """Execute a blue-green deployment.
 
     Args:
         project_root (str): path to the project's root folder
-        deployment_name (str): deployment's name used to get its data
+        deployment_name (str): deployment's name base name used to check when it's ready
+        deployment_app_label (str): deployment's app label used to check the current deployment version
+            found in (spec -> template -> metadata -> labels -> app)
     """
     # check which is the current color and deploy with new color
-    old_color = get_deployment_label(deployment_name)
+    old_color = get_deployment_label(deployment_app_label)
     print(f'Old deployment color: {old_color}')
 
     new_color = BLUE if old_color == GREEN else GREEN
@@ -103,11 +110,14 @@ def run(project_root, deployment_name):
 
     # check whenever new deployment is ready
     time.sleep(3)
-    subprocess.call(['kubectl', 'rollout', 'status', 'deployment', deployment_name], timeout=500)
+    subprocess.call(['kubectl', 'rollout', 'status', 'deployment', f'{deployment_name}-{new_color}'])
 
     # tell service to use new deployment applying service.yaml
     path = os.path.join(project_root, SERVICE_SPEC_FILE)
     apply(path, new_color)
+
+    # remove old deployment
+    subprocess.call(['kubectl', 'delete', 'deployment', f'{deployment_name}-{old_color}'])
 
     # remove temporal folder
     time.sleep(3)
@@ -116,7 +126,15 @@ def run(project_root, deployment_name):
 
 if __name__ == "__main__":
     # get project root and deployment name from command line attributes
-    project_root = sys.argv[1]
-    deployment_name = sys.argv[2]
-    run(project_root, deployment_name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('project_root',
+                        help="path to the project's root folder")
+    parser.add_argument('deployment_name',
+                        help="deployment's base name used to check when it's ready")
+    parser.add_argument('deployment_app_label',
+            help="deployment's app label used to check the current version\
+                found in (spec -> template -> metadata -> labels -> app)")
+    args = parser.parse_args()
+
+    run(args.project_root, args.deployment_name, args.deployment_app_label)
 
